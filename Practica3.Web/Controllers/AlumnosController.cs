@@ -22,7 +22,7 @@ namespace Practica3.Web.Controllers
         // GET: Alumnos
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Alumnos.ToListAsync());
+            return View(await _context.Alumnos.Include(c => c.Municipios).ToListAsync());
         }
 
         // GET: Alumnos/Details/5
@@ -34,6 +34,8 @@ namespace Practica3.Web.Controllers
             }
 
             var alumno = await _context.Alumnos
+                .Include(c => c.Municipios)
+                .ThenInclude(d => d.Barrios)
                 .FirstOrDefaultAsync(m => m.Id == id);
             if (alumno == null)
             {
@@ -148,7 +150,10 @@ namespace Practica3.Web.Controllers
                 return NotFound();
             }
             Alumno alumno = await _context.Alumnos
-            .FirstOrDefaultAsync(m => m.Id == id);
+                 .Include(c => c.Municipios)
+                 .ThenInclude(d => d.Barrios)
+                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (alumno == null)
             {
                 return NotFound();
@@ -169,9 +174,136 @@ namespace Practica3.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        private bool AlumnoExists(int id)
+        public async Task<IActionResult> AddMunicipio(int? id)
         {
-            return _context.Alumnos.Any(e => e.Id == id);
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Alumno alumno = await _context.Alumnos.FindAsync(id);
+            if (alumno == null)
+            {
+                return NotFound();
+            }
+            Municipio model = new Municipio { AlumnoId = alumno.Id };
+            return View(model);
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddMunicipio(Municipio municipio)
+        {
+            if (ModelState.IsValid)
+            {
+                Alumno alumno = await _context.Alumnos
+                .Include(c => c.Municipios)
+                .FirstOrDefaultAsync(c => c.Id == municipio.AlumnoId);
+                if (alumno == null)
+                {
+                    return NotFound();
+                }
+                try
+                {
+                    municipio.Id = 0;
+                    alumno.Municipios.Add(municipio);
+                    _context.Update(alumno);
+                    await _context.SaveChangesAsync();
+
+                    return RedirectToAction(nameof(Details), new
+                    {
+                        Id = alumno.Id
+                    });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if
+                   (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same name.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty,
+                       dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(municipio);
+        }
+
+        public async Task<IActionResult> EditMunicipio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios.FindAsync(id);
+            if (municipio == null)
+            {
+                return NotFound();
+            }
+            Alumno alumno = await _context.Alumnos.FirstOrDefaultAsync(c =>
+           c.Municipios.FirstOrDefault(d => d.Id == municipio.Id) != null);
+            municipio.AlumnoId = alumno.Id;
+            return View(municipio);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditMunicipio(Municipio municipio)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(municipio);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(Details), new
+                    {
+                        Id = municipio.AlumnoId
+                    });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same name.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty,
+                       dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(municipio);
+        }
+
+        public async Task<IActionResult> DeleteMunicipio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios
+            .Include(d => d.Barrios)
+            .FirstOrDefaultAsync(m => m.Id == id);
+            if (municipio == null)
+            {
+                return NotFound();
+            }
+            Alumno alumno = await _context.Alumnos.FirstOrDefaultAsync(c =>
+           c.Municipios.FirstOrDefault(d => d.Id == municipio.Id) != null);
+            _context.Municipios.Remove(municipio);
+            await _context.SaveChangesAsync();
+            return RedirectToAction(nameof(Details), new { Id = alumno.Id });
+        }
+
     }
 }

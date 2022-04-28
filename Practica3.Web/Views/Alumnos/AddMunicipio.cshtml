@@ -1,0 +1,23 @@
+﻿@model Practica3.Web.Models.Municipio
+@{
+    ViewData["Title"] = "Add Municipio";
+}
+<h2>Add</h2>
+<h4>Municipio</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="AddMunicipio">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input type="hidden" asp-for="AlumnoId" />
+            <partial name="_Municipio" />
+            <div class="form-group">
+                <input type="submit" value="Save" class="btn btn-primary" />
+                <a asp-action="Details" asp-route-id="@Model.AlumnoId" class="btn btnsuccess">Back to List</a>
+            </div>
+        </form>
+    </div>
+</div>
+@section Scripts {
+ @{ await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
