@@ -305,5 +305,153 @@ namespace Practica3.Web.Controllers
             return RedirectToAction(nameof(Details), new { Id = alumno.Id });
         }
 
+        public async Task<IActionResult> DetailsMunicipio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios
+            .Include(d => d.Barrios)
+            .FirstOrDefaultAsync(m => m.Id == id);
+            if (municipio == null)
+            {
+                return NotFound();
+            }
+            Alumno country = await _context.Alumnos.FirstOrDefaultAsync(c =>
+           c.Municipios.FirstOrDefault(d => d.Id == municipio.Id) != null);
+            municipio.AlumnoId = country.Id;
+            return View(municipio);
+        }
+
+        public async Task<IActionResult> AddBarrio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios.FindAsync(id);
+            if (municipio == null)
+            {
+                return NotFound();
+            }
+            Barrio model = new Barrio { MunicipioId = municipio.Id };
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddBarrio(Barrio barrio)
+        {
+            if (ModelState.IsValid)
+            {
+                Municipio municipio = await _context.Municipios
+                .Include(d => d.Barrios)
+                .FirstOrDefaultAsync(c => c.Id == barrio.MunicipioId);
+                if (municipio == null)
+                {
+                    return NotFound();
+                }
+                try
+                {
+                    barrio.Id = 0;
+                    municipio.Barrios.Add(barrio);
+                    _context.Update(municipio);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(DetailsMunicipio), new { Id = municipio.Id });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same name.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty,
+                       dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(barrio);
+        }
+
+        public async Task<IActionResult> EditBarrio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Barrio barrio = await _context.Barrios.FindAsync(id);
+            if (barrio == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios.FirstOrDefaultAsync(d =>
+           d.Barrios.FirstOrDefault(c => c.Id == barrio.Id) != null);
+            barrio.MunicipioId = municipio.Id;
+            return View(barrio);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditBarrio(Barrio barrio)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    _context.Update(barrio);
+                    await _context.SaveChangesAsync();
+                    return RedirectToAction(nameof(DetailsMunicipio), new { Id = barrio.MunicipioId });
+                }
+                catch (DbUpdateException dbUpdateException)
+                {
+                    if (dbUpdateException.InnerException.Message.Contains("duplicate"))
+                    {
+                        ModelState.AddModelError(string.Empty, "There are a record with the same name.");
+                    }
+                    else
+                    {
+                        ModelState.AddModelError(string.Empty,
+                       dbUpdateException.InnerException.Message);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    ModelState.AddModelError(string.Empty, exception.Message);
+                }
+            }
+            return View(barrio);
+        }
+
+        public async Task<IActionResult> DeleteBarrio(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+            Barrio barrio = await _context.Barrios
+            .FirstOrDefaultAsync(m => m.Id == id);
+            if (barrio == null)
+            {
+                return NotFound();
+            }
+            Municipio municipio = await _context.Municipios.FirstOrDefaultAsync(d
+           => d.Barrios.FirstOrDefault(c => c.Id == barrio.Id) != null);
+            _context.Barrios.Remove(barrio);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(DetailsMunicipio), new
+            {
+                Id = municipio.Id
+            });
+        }
+
+
+
     }
 }
