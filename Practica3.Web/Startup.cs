@@ -31,6 +31,8 @@ namespace Practica3.Web
 
                 cfg.UseSqlServer(Configuration.GetConnectionString("DefaultConnection"));
             });
+            services.AddTransient<SeedDb>();
+
             services.AddControllersWithViews();
         }
 
